@@ -1,9 +1,9 @@
-
+import {Select} from "./Select";
 
 function App() {
   return (
     <div className="App">
-      Hi
+      <Select/>
     </div>
   )
 }
