@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from "react"
+import React, {useState, useEffect, useRef} from "react"
 
 import styles from "./select.module.css"
 
@@ -25,7 +25,9 @@ type SelectProps = {
 
 export const Select: React.FC<SelectProps> = ({multiple, value, onChange, options}) => {
     const [isOpen, setIsOpen] = useState<boolean>(false);
-    const [highlightedIdx, setHighlightedIdx] = useState<number | null>(0);
+    const [highlightedIdx, setHighlightedIdx] = useState<number>(0);
+
+    const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (isOpen) {
@@ -33,12 +35,50 @@ export const Select: React.FC<SelectProps> = ({multiple, value, onChange, option
         }
     }, [isOpen]);
 
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if (e.target != containerRef.current) { //should only work on the container itself
+                return;
+            }
+
+            switch(e.code) {
+                case "Enter":
+                case "Space":
+                    setIsOpen(prev => !prev);
+                    if (isOpen) {
+                        selectOption(e, options[highlightedIdx]);
+                    }
+                    break;
+                case "ArrowUp":
+                case "ArrowDown": {
+                    if (!isOpen) {
+                        setIsOpen(true);
+                        break;
+                    }
+                    const newValue = highlightedIdx + (e.code === "ArrowDown" ? 1 : -1);
+
+                    if (newValue >= 0 && newValue < options.length) {
+                        setHighlightedIdx(newValue);
+                    }
+                    break;
+                }
+                case "Escape":
+                    setIsOpen(false);
+                    break;
+            }
+        }
+
+        containerRef.current?.addEventListener("keydown", handler);
+
+        return () => {containerRef.current?.removeEventListener("keydown", handler);}
+    }, [isOpen, highlightedIdx, options]);
+
     const clearOptions = (e: React.MouseEvent) => {
         e.stopPropagation();
         multiple ? onChange([]) : onChange(undefined);
     }
 
-    const selectOption = (e: React.MouseEvent, option: SelectOption) => {
+    const selectOption = (e: MouseEvent | KeyboardEvent, option: SelectOption) => {
         e.stopPropagation();
 
         if (multiple) {
@@ -66,6 +106,7 @@ export const Select: React.FC<SelectProps> = ({multiple, value, onChange, option
             className={styles.container}
             onClick={() => setIsOpen(prev => !prev)}
             onBlur={() => setIsOpen(false)}
+            ref={containerRef}
         >
             <span className={styles.value}>
                 {multiple ? value.map(val => (
